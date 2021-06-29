@@ -46,6 +46,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ChartBox\ChartData.cs" />
     <Compile Include="ChartBox\Grid.cs" />
     <Compile Include="ChartBox\GridLine.cs" />
     <Compile Include="Form1.cs">

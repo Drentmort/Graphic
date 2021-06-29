@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using Graphic.MyList;
 
 namespace Graphic.ChartBox
 {
@@ -18,6 +19,10 @@ namespace Graphic.ChartBox
         protected Point start;
         protected Point end;
         protected Pen pen;
+        protected Font font;
+        protected Brush brush;
+        protected bool visible;
+        protected double index;
 
         public Pen Pen
         {
@@ -25,10 +30,28 @@ namespace Graphic.ChartBox
             set { pen = value; }
         }
 
+        public Font Font
+        {
+            get { return font; }
+            set { font = value; }
+        }
+
+        public Brush Brush
+        {
+            get { return brush; }
+            set { brush = value; }
+        }
+
+        public bool Visible { get { return visible; } }
+        public double Index{ get { return index; } set { index = value; } }
+        public virtual int Coordinate { get; set;  }
+
         public GridLine(Rectangle rectangle)
         {
             field = rectangle;
         }
+
+        public virtual void SetVisible(Matrix transform) { }
 
         public virtual void ScaleLineLength(PointF scale) { }
 
@@ -42,12 +65,20 @@ namespace Graphic.ChartBox
 
         public void Draw(Graphics e)
         {
+            Pen temp = pen;
+            if (index == 0)
+                pen = new Pen(Color.Black, 3);
             using (GraphicsPath line = new GraphicsPath())
             {
                 line.AddLine(start, end);
+
                 e.DrawPath(pen, line);
-            }          
+            }
+            pen = temp;
         }
+
+        public virtual void DrawSign(Graphics e, PointF zero)
+        {  }
 
         public void Dispose()
         {
@@ -58,6 +89,15 @@ namespace Graphic.ChartBox
 
     class HorGridLine : GridLine
     {
+        public override int Coordinate
+        {
+            get { return start.Y; }
+            set
+            {
+                start.Y = value;
+                end.Y = value;
+            }
+        }
         public HorGridLine(Rectangle bounds, int y):
             base(bounds)
         {
@@ -73,19 +113,39 @@ namespace Graphic.ChartBox
             end.X += (int)ratio;
         }
 
-        public override void ShiftLine(int x, int y)
+        public override void SetVisible(Matrix transform)
         {
-            base.ShiftLine(x, y);
+            Point[] points = { start, end };
+            transform.TransformPoints(points);
+            if (points[0].Y >= 0 &&
+                points[0].Y <= field.Height)
+                visible = true;
         }
 
         public override string ToString()
         {
             return "Horzontal";
         }
+
+        public override void DrawSign(Graphics e, PointF location)
+        {
+            String num = String.Format("{0:F2}", index);
+
+            e.DrawString(num, font, brush, location);
+        }
     }
 
     class VerGridLine : GridLine
     {
+        public override int Coordinate
+        {
+            get { return start.X; }
+            set 
+            { start.X = value;
+                end.X = value;
+            }
+        }
+
         public VerGridLine(Rectangle bounds, int x) :
             base(bounds)
         {
@@ -101,14 +161,29 @@ namespace Graphic.ChartBox
             end.Y += (int)ratio;
         }
 
-        public override void ShiftLine(int x, int y)
+        public override void SetVisible(Matrix transform)
         {
-            base.ShiftLine(x, y);
+            Point[] points = { start, end };
+            transform.TransformPoints(points);
+            if (points[0].X >= 0 && 
+                points[0].X <= field.Width)
+                visible = true;
         }
 
         public override string ToString()
         {
             return "Vertical";
+        }
+
+        public override void DrawSign(Graphics e, PointF location)
+        {
+            String num = "";
+            if ((Math.Abs(index) < 0.01 || Math.Abs(index) > 1000) && index!=0)
+                num = String.Format("{0:E2}", index);
+            else
+                num = String.Format("{0:F2}", index);
+
+            e.DrawString(num, font, brush, location);
         }
     }
 }

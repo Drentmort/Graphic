@@ -10,7 +10,6 @@ C:\Users\Anton\source\repos\Graphic\Graphic\obj\Debug\Graphic.Form1.resources
 C:\Users\aan\source\repos\Graphic-main\Graphic\bin\Debug\Graphic.exe.config
 C:\Users\aan\source\repos\Graphic-main\Graphic\bin\Debug\Graphic.exe
 C:\Users\aan\source\repos\Graphic-main\Graphic\bin\Debug\Graphic.pdb
-C:\Users\aan\source\repos\Graphic-main\Graphic\obj\Debug\Graphic.csprojAssemblyReference.cache
 C:\Users\aan\source\repos\Graphic-main\Graphic\obj\Debug\Graphic.Form1.resources
 C:\Users\aan\source\repos\Graphic-main\Graphic\obj\Debug\Graphic.Properties.Resources.resources
 C:\Users\aan\source\repos\Graphic-main\Graphic\obj\Debug\Graphic.csproj.GenerateResource.cache
@@ -18,3 +17,4 @@ C:\Users\aan\source\repos\Graphic-main\Graphic\obj\Debug\Graphic.csproj.CoreComp
 C:\Users\aan\source\repos\Graphic-main\Graphic\obj\Debug\Graphic.exe
 C:\Users\aan\source\repos\Graphic-main\Graphic\obj\Debug\Graphic.pdb
 C:\Users\Anton\source\repos\Graphic\Graphic\obj\Debug\Graphic.csprojAssemblyReference.cache
+C:\Users\aan\source\repos\Graphic-main\Graphic\obj\Debug\Graphic.csprojAssemblyReference.cache

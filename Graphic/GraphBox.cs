@@ -3,26 +3,26 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Reflection;
 using System.Windows.Forms;
 
 namespace Graphic
 {
-    public class GraphBox : Control
-    {
 
-        private Matrix transformation = null;
+    public class GraphBox : Control
+    { 
         private Grid grid = null;
         private PointF mouseStartLocation = new PointF(-1,-1);
         private PointF mouseEndLocation;
         private PointF location = new PointF();
-        private PointF shift;
+        private int speedLimit=15;
+
 
         public GraphBox()
         {
             DoubleBuffered = true;
             SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
-            transformation = new Matrix();
-            shift = new Point();
+            speedLimit = Bounds.Height / 10;   
         }
 
         protected override void OnMouseDown(MouseEventArgs e)
@@ -35,9 +35,20 @@ namespace Graphic
         {
             base.OnMouseUp(e);
             mouseEndLocation = e.Location;
+            float signX = (mouseEndLocation.X - mouseStartLocation.X) / 
+                Math.Abs(mouseEndLocation.X - mouseStartLocation.X);
 
-            grid.Shift(mouseEndLocation.X - mouseStartLocation.X, 
-                mouseEndLocation.Y - mouseStartLocation.Y);
+            float signY = (mouseEndLocation.Y - mouseStartLocation.Y) /
+                Math.Abs(mouseEndLocation.Y - mouseStartLocation.Y);
+
+            float xDiff = Math.Abs(mouseEndLocation.X - mouseStartLocation.X) > speedLimit ?
+                speedLimit * signX : mouseEndLocation.X - mouseStartLocation.X;
+
+            float yDiff = Math.Abs(mouseEndLocation.Y - mouseStartLocation.Y) > speedLimit ?
+                speedLimit * signY : mouseEndLocation.Y - mouseStartLocation.Y;
+
+
+            grid.Shift(xDiff, yDiff);
             Invalidate();
         }
 
@@ -52,8 +63,19 @@ namespace Graphic
                 mouseEndLocation = e.Location;
             }
 
-            grid.Shift(mouseEndLocation.X - mouseStartLocation.X,
-                mouseEndLocation.Y - mouseStartLocation.Y);
+            float signX = (mouseEndLocation.X - mouseStartLocation.X) /
+                 Math.Abs(mouseEndLocation.X - mouseStartLocation.X);
+
+            float signY = (mouseEndLocation.Y - mouseStartLocation.Y) /
+                 Math.Abs(mouseEndLocation.Y - mouseStartLocation.Y);
+
+            float xDiff = Math.Abs(mouseEndLocation.X - mouseStartLocation.X) > speedLimit ?
+                speedLimit * signX : mouseEndLocation.X - mouseStartLocation.X;
+            float yDiff = Math.Abs(mouseEndLocation.Y - mouseStartLocation.Y) > speedLimit ?
+                speedLimit * signY : mouseEndLocation.Y - mouseStartLocation.Y;
+
+
+            grid.Shift(xDiff, yDiff);
             mouseStartLocation = mouseEndLocation;
             Invalidate();
         }
@@ -67,7 +89,6 @@ namespace Graphic
             location.X -= Bounds.X;
             location.Y -= Bounds.Y;
             float K = e.Delta > 0 ? 1.05f : 0.95f;
-
             grid.Scale(new PointF(K, K), e.Location);           
 
             Invalidate();
@@ -75,8 +96,10 @@ namespace Graphic
 
         protected override void OnResize(EventArgs e)
         {
-            base.OnResize(e);
-
+            //base.OnResize(e);
+            speedLimit = Bounds.Height / 10;
+            if (grid != null)
+                grid.Resize(Bounds);
             Invalidate();
         }
 
@@ -84,11 +107,23 @@ namespace Graphic
         {
             base.OnPaint(e);
             e.Graphics.DrawRectangle(Pens.Black, new Rectangle(0, 0, Bounds.Width-1, Bounds.Height-1));
-            grid = (grid == null) ? new Grid(Bounds,new PointF(1,1)) : grid;
+            if (grid == null)
+            {
+                grid = new Grid(Bounds, 10);
+                AddData();
+            }
+               
             grid.Draw(e.Graphics);
-            
         }
 
-
+        public void AddData()
+        {
+            TimeData dataLine = new TimeData(Pens.Red);
+            for (int i = -100; i <= 100; i++)
+            {
+                dataLine.AddPoint(i, 4);
+            }
+            grid.AddDataLine(dataLine);
+        }
     }
 }
