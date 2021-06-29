@@ -1,0 +1,11 @@
+C:\Users\Anton\source\repos\chart\chart\bin\Debug\MathChart.exe.config
+C:\Users\Anton\source\repos\chart\chart\bin\Debug\MathChart.exe
+C:\Users\Anton\source\repos\chart\chart\bin\Debug\MathChart.pdb
+C:\Users\Anton\source\repos\chart\chart\obj\Debug\chart.Chart.Chart.resources
+C:\Users\Anton\source\repos\chart\chart\obj\Debug\MathChart.Properties.Resources.resources
+C:\Users\Anton\source\repos\chart\chart\obj\Debug\chart.csproj.GenerateResource.cache
+C:\Users\Anton\source\repos\chart\chart\obj\Debug\chart.csproj.CoreCompileInputs.cache
+C:\Users\Anton\source\repos\chart\chart\obj\Debug\MathChart.exe
+C:\Users\Anton\source\repos\chart\chart\obj\Debug\MathChart.pdb
+C:\Users\Anton\source\repos\chart\chart\obj\Debug\chart.Form1.resources
+C:\Users\Anton\source\repos\chart\chart\obj\Debug\chart.csprojAssemblyReference.cache
