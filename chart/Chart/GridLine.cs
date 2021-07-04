@@ -1,18 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Threading.Tasks;
 
 namespace MathChart.Chart
 {
-    interface IDrawer
-    {
-        void Draw(Graphics e);
-    }
-
-    class GridLine : IDrawer, IDisposable
+    abstract class GridLine
     {
         protected RectangleF field;
         protected Point start;
@@ -21,12 +13,7 @@ namespace MathChart.Chart
         protected Font font;
         protected Brush brush;
         protected double index;
-
-        public Pen Pen
-        {
-            get { return pen; }
-            set { pen = value; }
-        }
+        protected bool isAdditional;
 
         public Font Font
         {
@@ -34,14 +21,8 @@ namespace MathChart.Chart
             set { font = value; }
         }
 
-        public Brush Brush
-        {
-            get { return brush; }
-            set { brush = value; }
-        }
-
         public double Index { get { return index; } set { index = value; } }
-        public virtual int Coordinate { get; set; }
+        public abstract int Coordinate { get; set; }
 
         public GridLine(RectangleF rectangle)
         {
@@ -50,35 +31,25 @@ namespace MathChart.Chart
             field = rectangle;
         }
 
-        public virtual void ShiftLine(int x, int y)
+        public virtual void Draw(Graphics e)
         {
-            start.X += x;
-            start.Y += y;
-            end.X += x;
-            end.Y += y;
-        }
-
-        public void Draw(Graphics e)
-        {
-            Pen temp = pen;
             if (index == 0)
-                pen = new Pen(Color.Black, 3);
+            {
+                pen.Width *= 2;
+                pen.DashStyle = DashStyle.Solid;
+                pen.Color = Color.Black;
+            }
+            
             using (GraphicsPath line = new GraphicsPath())
             {
                 line.AddLine(start, end);
-
                 e.DrawPath(pen, line);
             }
-            pen = temp;
-        }
+        }    
 
-        public virtual void DrawSign(Graphics e, PointF location) { }
+        public abstract void DrawSign(Graphics e, PointF location);
 
-        public void Dispose()
-        {
-            if (pen != null)
-                pen.Dispose();
-        }
+        public abstract void BuildPen(PointF scale);
     }
 
     class HorGridLine : GridLine
@@ -92,6 +63,7 @@ namespace MathChart.Chart
                 end.Y = value;
             }
         }
+
         public HorGridLine(RectangleF bounds, int y) :
             base(bounds)
         {
@@ -107,6 +79,8 @@ namespace MathChart.Chart
 
         public override void DrawSign(Graphics e, PointF location)
         {
+            if (isAdditional)
+                return;
             PointF scale = new PointF(e.Transform.Elements[0], e.Transform.Elements[3]);
             String num = String.Format("{0:F2}", index);
             PointF temp = new PointF(location.X * scale.X, Coordinate * scale.Y);
@@ -114,6 +88,23 @@ namespace MathChart.Chart
             e.Transform = new Matrix(1, 0, 0, 1, e.Transform.OffsetX, e.Transform.OffsetY);
             e.DrawString(num, font, brush, temp);
             e.Transform = new Matrix(scale.X, 0, 0, scale.Y, e.Transform.OffsetX, e.Transform.OffsetY);
+        }
+
+        public override void BuildPen(PointF scale)
+        {
+            pen = new Pen(Color.Gray, 1);
+            if (Math.IEEERemainder(index * scale.Y, 2) != 0)
+            {
+                pen.DashStyle = DashStyle.Dash;
+                pen.Color = Color.LightGray;
+                isAdditional = true;
+            }
+        }
+
+        public override void Draw(Graphics e)
+        {
+            pen.Width /= e.Transform.Elements[3];
+            base.Draw(e);
         }
     }
 
@@ -144,6 +135,8 @@ namespace MathChart.Chart
 
         public override void DrawSign(Graphics e, PointF location)
         {
+            if (isAdditional)
+                return;
             PointF scale = new PointF(e.Transform.Elements[0], e.Transform.Elements[3]);
             String num = String.Format("{0:F2}", index);
             PointF temp = new PointF(Coordinate * scale.X, location.Y * scale.Y);
@@ -151,6 +144,23 @@ namespace MathChart.Chart
             e.Transform = new Matrix(1, 0, 0, 1, e.Transform.OffsetX, e.Transform.OffsetY);
             e.DrawString(num, font, brush, temp);
             e.Transform = new Matrix(scale.X, 0, 0, scale.Y, e.Transform.OffsetX, e.Transform.OffsetY);
+        }
+
+        public override void BuildPen(PointF scale)
+        {
+            pen = new Pen(Color.Gray, 1);
+            if (Math.IEEERemainder(index * scale.X, 2) != 0)
+            {
+                pen.DashStyle = DashStyle.Dash;
+                pen.Color = Color.LightGray;
+                isAdditional = true;
+            }
+        }
+
+        public override void Draw(Graphics e)
+        {
+            pen.Width /= e.Transform.Elements[0];
+            base.Draw(e);
         }
     }
 }

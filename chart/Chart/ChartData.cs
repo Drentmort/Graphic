@@ -2,43 +2,58 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Linq;
 
 namespace MathChart.Chart
-{
+{  
     public class ChartData
     {
-        private Matrix resolution;
-        protected List<PointF> rawData;
+        private List<PointF> drawData;
+        private float minX = float.MaxValue;
+        private float minY = float.MaxValue;
+        private float maxX = float.MinValue;
+        private float maxY = float.MinValue;
+        public Matrix Resolution { get; set; }
 
-        public Matrix Resolution
-        {
-            get { return resolution; }
-            set
-            {
-                resolution = value;
-            }
-        }
+        public Pen ChPen { get; set; }
+
+        public float ChLineWidth { get; set; } 
+        
+        public float XMin { get { return minX; } }
+        public float XMax { get { return maxX; } }
+        public float YMin { get { return minY; } }
+        public float YMax { get { return maxY; } }
 
         public ChartData()
         {
-            rawData = new List<PointF>();
+            drawData = new List<PointF>();
+            ChLineWidth = 3;
+            ChPen = new Pen(Color.Black, ChLineWidth);          
         }
 
         public virtual void AddPoint(double abscissa, double ordinate)
         {
             float x = (float)abscissa;
             float y = (float)ordinate;
-            rawData.Add(new PointF(x, y));
+            drawData.Add(new PointF(x, y));
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
         }
 
         public void Draw(Graphics e)
         {
-            PointF[] temp = rawData.ToArray();
-            resolution.TransformPoints(temp);           
+            PointF[] temp = drawData.ToArray();
+            Resolution.TransformPoints(temp);
+
+            ChPen.Width = ChLineWidth;
+            ChPen.Width /= (float)Math.Sqrt(Math.Pow(e.Transform.Elements[0], 2) + Math.Pow(e.Transform.Elements[3], 2));
+            
             using (GraphicsPath gr = new GraphicsPath())
             {
                 gr.AddCurve(temp);
-                e.DrawPath(Pens.Red, gr);
+                e.DrawPath(ChPen, gr);
             }
         }
     }

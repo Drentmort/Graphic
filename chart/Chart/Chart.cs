@@ -1,12 +1,10 @@
-﻿using System;
-using System.CodeDom.Compiler;
+﻿using MathChart.Chart;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Windows.Forms;
-using MathChart.Chart;
 
 namespace chart.Chart
 {
@@ -20,10 +18,10 @@ namespace chart.Chart
     public partial class Chart : UserControl
     {
         private readonly int ceilSize = 64;
-        private readonly float wheelStep = 1.05f;
-        private readonly float maxScaleLimit = 1.75f;
-        private readonly float minScaleLimit = 0.5f;
         private readonly float refreshStep = 2;
+        private readonly float wheelStep = (float)Math.Pow(2, 0.1);
+        private readonly float maxScaleLimit = 2f;
+        private readonly float minScaleLimit = 0.5f;
         private readonly int signFieldSize = 5;
 
         private Font font;
@@ -44,20 +42,31 @@ namespace chart.Chart
 
         public ChartData Data
         {
-            set 
+            set
             {
                 if (data == null)
                 {
                     data = new Dictionary<int, ChartData>();
-                    data.Add(1, value);
+                    colors = new Dictionary<int, Color>();
+                    data.Add(0, value);
+                    colors.Add(0, queryColors[0]);
                 }
-                else data.Add(data.Last().Key + 1, value);
+                else
+                {
+                    data.Add(data.Last().Key + 1, value);
+                    colors.Add(colors.Last().Key + 1, queryColors[(colors.Last().Key + 1) % queryColors.Count]);
+                }
+
+                PointF loc = new PointF(value.XMin, value.YMax);
+                SizeF size = new SizeF(value.XMax - value.XMin, value.YMax - value.YMin);
+                RescaleByRect(new RectangleF(loc, size));
+
                 Invalidate();
             }
-        } 
-        
+        }
+
         public Chart()
-        {       
+        {
             gridLines = new List<GridLine>();
             gridTransform = new Matrix();
             dataTransform = new Matrix();
@@ -67,21 +76,47 @@ namespace chart.Chart
             font = new Font(FontFamily.GenericSansSerif, 12);
             InitializeComponent();
             SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
+            Color[] colors = { Color.Red, Color.Blue, Color.Green, Color.BlueViolet, Color.OrangeRed, Color.GreenYellow};
+            queryColors = new List<Color>(colors);
         }
 
-        public void RescaleByRect(RectangleF newField, bool inPixels)
+        public void RescaleByRect(RectangleF newField)
         {
-            float mult = 1;
-            if (!inPixels)
-                mult = ceilSize;
-            PointF[] plgpts = new PointF[3]
+            PointF point = GetPointByIndex(newField.Location);
+            RectangleF rect = new RectangleF(point.X, point.Y,
+                newField.Width * ceilSize,
+                newField.Height * ceilSize);
+            scaleCount = new PointF(1, 1);
+            PointF[] points = new PointF[3]
             {
-                new PointF(newField.Left*mult, newField.Top*mult),
-                new PointF(newField.Right*mult, newField.Top*mult),
-                new PointF(newField.Left*mult, newField.Bottom*mult)
+                new PointF(Bounds.Left,Bounds.Top),
+                new PointF(Bounds.Right,Bounds.Top),
+                new PointF(Bounds.Left,Bounds.Bottom)
             };
-            gridTransform = new Matrix(Bounds, plgpts);
-            RebuildTransfomations(newField.Location);
+            gridTransform = new Matrix(rect, points);
+
+            if (gridTransform.Elements[0] < minScaleLimit)
+                scaleCount.X *= (float)Math.Pow(minScaleLimit, (int)Math.Log((1 / gridTransform.Elements[0]), 2));           
+
+            if (gridTransform.Elements[3] < minScaleLimit)
+                scaleCount.Y *= (float)Math.Pow(minScaleLimit, (int)Math.Log((1 / gridTransform.Elements[3]), 2));
+
+            if (gridTransform.Elements[0] > maxScaleLimit)
+                scaleCount.X *= (float)Math.Pow(maxScaleLimit, (int)Math.Log((gridTransform.Elements[0]), 2));
+
+            if (gridTransform.Elements[3] > maxScaleLimit)
+                scaleCount.Y *= (float)Math.Pow(maxScaleLimit, (int)Math.Log((gridTransform.Elements[3]), 2));
+
+            float scX, scY;
+            scX = 1 / scaleCount.X;
+            scY = 1 / scaleCount.Y;
+            gridTransform.Scale(scX, scY, MatrixOrder.Append);
+
+            PointF zero = GetPointByIndex(new PointF(0, 0));
+            gridTransform.Translate(-zero.X, -zero.Y, MatrixOrder.Append);
+            point = GetPointByIndex(newField.Location);
+            gridTransform.Translate(-point.X, -point.Y, MatrixOrder.Append);
+
             Invalidate();
         }
 
@@ -93,7 +128,7 @@ namespace chart.Chart
         }
 
         protected override void OnMouseMove(MouseEventArgs e)
-        {            
+        {
             if (e.Button != MouseButtons.Left)
                 return;
             if (!new Rectangle(new Point(), Size).Contains(e.Location))
@@ -131,9 +166,9 @@ namespace chart.Chart
             {
                 factor = wheelStep;
             }
-            else factor = 1/wheelStep;
+            else factor = 1 / wheelStep;
 
-            gridTransform.Translate(-e.Location.X, -e.Location.Y,MatrixOrder.Append);
+            gridTransform.Translate(-e.Location.X, -e.Location.Y, MatrixOrder.Append);
 
             switch (scaleType)
             {
@@ -148,10 +183,10 @@ namespace chart.Chart
                 default:
                     gridTransform.Scale(factor, factor, MatrixOrder.Append);
                     globScale.X *= factor;
-                    globScale.Y *= factor;            
+                    globScale.Y *= factor;
                     break;
             }
-            
+
             gridTransform.Translate(e.Location.X, e.Location.Y, MatrixOrder.Append);
             RebuildTransfomations(e.Location);
             base.OnMouseWheel(e);
@@ -165,9 +200,8 @@ namespace chart.Chart
         }
 
         protected override void OnPaint(PaintEventArgs e)
-        {           
+        {
             gridLines.Clear();
-
             int x = (int)Math.Round((float)Bounds.Width / (float)ceilSize / 2);
             int y = (int)Math.Round((float)Bounds.Height / (float)ceilSize / 2);
             center = new PointF(x * ceilSize, y * ceilSize);
@@ -177,15 +211,18 @@ namespace chart.Chart
             PointF centerSign = BuildPointForSigns(e);
             foreach (var line in gridLines)
             {
+                line.BuildPen(scaleCount);
                 line.Draw(e.Graphics);
                 line.DrawSign(e.Graphics, centerSign);
             }
             base.OnPaint(e);
-            
+
         }
 
         private void RebuildTransfomations(PointF mouse)
         {
+            PointF currentIndex = GetIndexByPoint(mouse);
+
             float x = mouse.X;
             float y = mouse.Y;
             if (gridTransform.Elements[0] > maxScaleLimit ||
@@ -198,7 +235,6 @@ namespace chart.Chart
                 gridTransform.Translate(-x, -y, MatrixOrder.Append);
                 gridTransform.Scale(1 / gridTransform.Elements[0], 1, MatrixOrder.Append);
                 gridTransform.Translate(x, y, MatrixOrder.Append);
-                isXSwitch = true;
             }
 
             if (gridTransform.Elements[3] > maxScaleLimit ||
@@ -208,19 +244,24 @@ namespace chart.Chart
                     scaleCount.Y *= refreshStep;
                 if (gridTransform.Elements[3] < minScaleLimit)
                     scaleCount.Y /= refreshStep;
+
                 gridTransform.Translate(-x, -y, MatrixOrder.Append);
                 gridTransform.Scale(1, 1 / gridTransform.Elements[3], MatrixOrder.Append);
                 gridTransform.Translate(x, y, MatrixOrder.Append);
-                isYSwitch = true;
             }
+
+            PointF loc = GetPointByIndex(currentIndex);
+
+            gridTransform.Translate(mouse.X - loc.X, mouse.Y - loc.Y);
+
         }
 
         private void BuildGrid(RectangleF bounds, PointF location)
         {
 
             int start = (int)(location.X - ((int)location.X % ceilSize));
-            GridLine line = new VerGridLine(bounds, start-ceilSize);
-            line.Index = (start - ceilSize - center.X) / ceilSize / scaleCount.X;
+            GridLine line = new VerGridLine(bounds, start - ceilSize);
+            line.Index = (start - ceilSize - center.X ) / ceilSize / scaleCount.X;
             line.Font = font;
             gridLines.Add(line);
 
@@ -263,18 +304,48 @@ namespace chart.Chart
                 dataLines.Resolution = dataTransform;
         }
 
+        private PointF GetIndexByPoint(PointF mouse)
+        {
+            Matrix matrix = gridTransform.Clone();
+            matrix.Invert();
+            PointF[] output = new PointF[1] { mouse };
+            matrix.TransformPoints(output);
+
+            output[0].X -= center.X;
+            output[0].Y -= center.Y;
+
+            output[0].X /= ceilSize * scaleCount.X;
+            output[0].Y /= -ceilSize * scaleCount.Y;
+
+
+            return output[0];
+        }
+
+        private PointF GetPointByIndex(PointF index)
+        {
+            PointF[] output = new PointF[1] { index };
+            output[0].X *= ceilSize * scaleCount.X;
+            output[0].Y *= -ceilSize * scaleCount.Y;
+
+            output[0].X += center.X;
+            output[0].Y += center.Y;
+
+            gridTransform.TransformPoints(output);
+            return output[0];
+        }
+
         private PointF BuildPointForSigns(PaintEventArgs e)
         {
-            PointF temp = new PointF(center.X,center.Y);
+            PointF temp = new PointF(center.X, center.Y);
             if (center.X < e.Graphics.ClipBounds.Left)
                 temp.X = e.Graphics.ClipBounds.Left;
-            if (center.X > e.Graphics.ClipBounds.Right - signFieldSize*font.Size)
-                temp.X = e.Graphics.ClipBounds.Right - signFieldSize * font.Size;
+            if (center.X > e.Graphics.ClipBounds.Right - signFieldSize * font.Size / e.Graphics.Transform.Elements[0])
+                temp.X = e.Graphics.ClipBounds.Right - signFieldSize * font.Size / e.Graphics.Transform.Elements[0];
 
             if (center.Y < e.Graphics.ClipBounds.Top)
                 temp.Y = e.Graphics.ClipBounds.Top;
-            if (center.Y > e.Graphics.ClipBounds.Bottom - font.Height)
-                temp.Y = e.Graphics.ClipBounds.Bottom - font.Height;
+            if (center.Y > e.Graphics.ClipBounds.Bottom - font.Height / e.Graphics.Transform.Elements[3])
+                temp.Y = e.Graphics.ClipBounds.Bottom - font.Height / e.Graphics.Transform.Elements[3];
             return temp;
         }
 
@@ -282,10 +353,14 @@ namespace chart.Chart
         {
             if (data == null)
                 return;
-
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             BuildDataTransform();
-            foreach (var dataLines in data.Values)
-                dataLines.Draw(e.Graphics);
+            foreach (var dataLine in data)
+            {
+                dataLine.Value.ChPen.Color = colors[dataLine.Key];
+                dataLine.Value.Draw(e.Graphics);
+            }
+
         }
     }
 }
