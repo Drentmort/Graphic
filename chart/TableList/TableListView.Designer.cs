@@ -1,6 +1,6 @@
-﻿namespace MathChart.Chart
+﻿namespace MathChart.TableList
 {
-    partial class Chart
+    partial class TableListView
     {
         /// <summary> 
         /// Обязательная переменная конструктора.
@@ -30,16 +30,12 @@
         {
             this.SuspendLayout();
             // 
-            // Chart
+            // TableListView
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.AutoSize = true;
-            this.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.DoubleBuffered = true;
-            this.Name = "Chart";
-            this.Size = new System.Drawing.Size(249, 288);
-            this.Paint += new System.Windows.Forms.PaintEventHandler(this.Chart_Paint);
+            this.Name = "TableListView";
             this.ResumeLayout(false);
 
         }

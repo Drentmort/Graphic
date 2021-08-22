@@ -1,12 +1,12 @@
-﻿using MathChart.Chart;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Windows.Forms;
+using MathChart.ListG;
 
-namespace chart.Chart
+namespace MathChart.Chart
 {
     enum Side
     {
@@ -25,7 +25,7 @@ namespace chart.Chart
         private readonly int signFieldSize = 5;
 
         private Font font;
-        private List<Color> queryColors;
+        private ListG<Color> queryColors;
 
         private Side scaleType;
         private Point startLoc;
@@ -36,38 +36,22 @@ namespace chart.Chart
         private PointF center;
         private Matrix gridTransform;
         private Matrix dataTransform;
-        private List<GridLine> gridLines;
+        private ListG<GridLine> gridLines;
         private Dictionary<int, ChartData> data;
         private Dictionary<int, Color> colors;
 
-        public ChartData Data
+        public Matrix DataTransform
         {
-            set
+            get 
             {
-                if (data == null)
-                {
-                    data = new Dictionary<int, ChartData>();
-                    colors = new Dictionary<int, Color>();
-                    data.Add(0, value);
-                    colors.Add(0, queryColors[0]);
-                }
-                else
-                {
-                    data.Add(data.Last().Key + 1, value);
-                    colors.Add(colors.Last().Key + 1, queryColors[(colors.Last().Key + 1) % queryColors.Count]);
-                }
-
-                PointF loc = new PointF(value.XMin, value.YMax);
-                SizeF size = new SizeF(value.XMax - value.XMin, value.YMax - value.YMin);
-                RescaleByRect(new RectangleF(loc, size));
-
-                Invalidate();
+                BuildDataTransform();
+                return dataTransform; 
             }
         }
 
         public Chart()
         {
-            gridLines = new List<GridLine>();
+            gridLines = new ListG<GridLine>();
             gridTransform = new Matrix();
             dataTransform = new Matrix();
             scaleType = Side.both;
@@ -77,7 +61,29 @@ namespace chart.Chart
             InitializeComponent();
             SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
             Color[] colors = { Color.Red, Color.Blue, Color.Green, Color.BlueViolet, Color.OrangeRed, Color.GreenYellow};
-            queryColors = new List<Color>(colors);
+            queryColors = new ListG<Color>(colors);
+        }
+
+        public void SetData(ChartData value)
+        {
+            if (data == null)
+            {
+                data = new Dictionary<int, ChartData>();
+                colors = new Dictionary<int, Color>();
+                data.Add(0, value);
+                colors.Add(0, queryColors[0]);                
+            }
+            else
+            {
+                data.Add(data.Last().Key + 1, value);
+                colors.Add(colors.Last().Key + 1, queryColors[(colors.Last().Key + 1) % queryColors.Count]);
+            }
+            data.Values.Last().Palette = this;
+            PointF loc = new PointF(value.XMin, value.YMax);
+            SizeF size = new SizeF(value.XMax - value.XMin, value.YMax - value.YMin);
+            RescaleByRect(new RectangleF(loc, size));
+
+            Invalidate();
         }
 
         public void RescaleByRect(RectangleF newField)
@@ -161,6 +167,8 @@ namespace chart.Chart
 
         protected override void OnMouseWheel(MouseEventArgs e)
         {
+            if (!new Rectangle(new Point(), Size).Contains(e.Location))
+                return;
             float factor;
             if (e.Delta > 0)
             {
@@ -217,6 +225,12 @@ namespace chart.Chart
             }
             base.OnPaint(e);
 
+        }
+
+        protected override void OnMouseEnter(EventArgs e)
+        {
+            Focus();
+            base.OnMouseEnter(e);
         }
 
         private void RebuildTransfomations(PointF mouse)
@@ -300,8 +314,8 @@ namespace chart.Chart
             dataTransform.Reset();
             dataTransform.Translate(center.X, center.Y, MatrixOrder.Append);
             dataTransform.Scale(ceilSize * scaleCount.X, ceilSize * scaleCount.Y, MatrixOrder.Prepend);
-            foreach (var dataLines in data.Values)
-                dataLines.Resolution = dataTransform;
+            //foreach (var dataLines in data.Values)
+            //    dataLines.Resolution = dataTransform;
         }
 
         private PointF GetIndexByPoint(PointF mouse)

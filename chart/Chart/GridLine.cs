@@ -4,7 +4,7 @@ using System.Drawing.Drawing2D;
 
 namespace MathChart.Chart
 {
-    abstract class GridLine
+    abstract class GridLine:IEquatable<GridLine>,ICloneable
     {
         protected RectangleF field;
         protected Point start;
@@ -50,6 +50,31 @@ namespace MathChart.Chart
         public abstract void DrawSign(Graphics e, PointF location);
 
         public abstract void BuildPen(PointF scale);
+
+        public bool Equals(GridLine other)
+        {
+            if (index != other.index)
+                return false;
+            if (start != other.start)
+                return false;
+            if (end != other.end)
+                return false;
+            return true;
+        }
+
+        public object Clone()
+        {
+            GridLine output = null;
+            if (this is VerGridLine)
+                output = new VerGridLine(field, Coordinate);
+            if (this is HorGridLine)
+                output = new HorGridLine(field, Coordinate);
+            output.index = index;
+            output.font = (Font)font.Clone();
+            output.brush = (Brush)brush.Clone();
+            output.pen = (Pen)pen.Clone();
+            return output;
+        }
     }
 
     class HorGridLine : GridLine
@@ -74,7 +99,7 @@ namespace MathChart.Chart
 
         public override string ToString()
         {
-            return "Horzontal";
+            return "Horzontal, coord = " + Coordinate.ToString();
         }
 
         public override void DrawSign(Graphics e, PointF location)
@@ -130,7 +155,7 @@ namespace MathChart.Chart
 
         public override string ToString()
         {
-            return "Vertical";
+            return "Vertical, coord = " + Coordinate.ToString();
         }
 
         public override void DrawSign(Graphics e, PointF location)
